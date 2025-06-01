@@ -1,40 +1,43 @@
 import streamlit as st
-from openai import OpenAI
-from dotenv import load_dotenv
-import os
+from transformers import pipeline, Conversation
 
-# 載入 .env 中的環境變數
-load_dotenv()
-api_key = os.getenv("OPENAI_API_KEY")
+# 載入對話模型（會自動下載模型）
+@st.cache_resource
+def load_model():
+    return pipeline("conversational", model="microsoft/DialoGPT-small")
 
-# 建立 OpenAI 客戶端
-client = OpenAI(api_key=api_key)
+chatbot = load_model()
 
-st.set_page_config(page_title="Inhale 心理諮詢", page_icon="🫧")
-st.title("🫧 Inhale 心理諮詢")
+if "history" not in st.session_state:
+    st.session_state.history = []
 
-# 初始化對話紀錄
-if "messages" not in st.session_state:
-    st.session_state.messages = [
-        {"role": "system", "content": "你是一位溫暖、理解且專業的心理師，善於傾聽使用者的困擾，並引導他們探索自己的情緒與需求。請用貼近人心的方式回應對方的話語，不用給太多分析，先讓對方感受到被理解。"}
-    ]
+st.title("Inhale 心理諮詢（本機版）")
 
-# 顯示歷史訊息
-for msg in st.session_state.messages:
-    st.chat_message(msg["role"]).write(msg["content"])
+user_input = st.text_input("請輸入訊息：", "")
 
-# 使用者輸入
-if prompt := st.chat_input("請說說你最近的心情……"):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    st.chat_message("user").write(prompt)
+if user_input:
+    # 新增用戶訊息
+    st.session_state.history.append({"role": "user", "content": user_input})
 
-    # 呼叫 OpenAI API 取得回應
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=st.session_state.messages,
-    )
-    reply = response.choices[0].message.content
+    # 用 Conversation 包裝過去對話
+    conv = Conversation()
+    for msg in st.session_state.history:
+        if msg["role"] == "user":
+            conv.add_user_input(msg["content"])
+        else:
+            # DialoGPT 回應
+            pass
 
-    # 加入回應到對話紀錄並顯示
-    st.session_state.messages.append({"role": "assistant", "content": reply})
-    st.chat_message("assistant").write(reply)
+    # 取得模型回答
+    result = chatbot(conv)
+    bot_reply = result.generated_responses[-1]
+
+    # 新增機器人回覆
+    st.session_state.history.append({"role": "bot", "content": bot_reply})
+
+# 顯示對話
+for msg in st.session_state.history:
+    if msg["role"] == "user":
+        st.markdown(f"**你：** {msg['content']}")
+    else:
+        st.markdown(f"**Inhale：** {msg['content']}")
