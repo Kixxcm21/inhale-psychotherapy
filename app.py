@@ -1,5 +1,11 @@
 import streamlit as st
-from transformers import pipeline, Conversation
+from transformers import pipeline
+
+# 建立對話機器人，使用 facebook/blenderbot-400M-distill 這個模型
+chatbot = pipeline("conversational", model="facebook/blenderbot-400M-distill")
+
+# 在程式中用 chatbot([user_input]) 來取得回答
+
 
 # 載入對話模型（會自動下載模型）
 @st.cache_resource
