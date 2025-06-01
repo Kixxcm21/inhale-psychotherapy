@@ -1,4 +1,4 @@
-iimport streamlit as st
+import streamlit as st
 from transformers import pipeline
 
 st.title("Inhale 心理諮詢 - 開源模型版")
